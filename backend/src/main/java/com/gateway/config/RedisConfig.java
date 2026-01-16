@@ -13,7 +13,7 @@ import java.net.URI;
 public class RedisConfig {
     private static final Logger logger = LoggerFactory.getLogger(RedisConfig.class);
 
-    @Value("${spring.redis.url:redis://localhost:6379}")
+    @Value("${spring.data.redis.url:redis://localhost:6379}")
     private String redisUrl;
 
     @Bean
