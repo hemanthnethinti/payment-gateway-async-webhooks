@@ -82,25 +82,30 @@ payment.open();
     
     <script>
         document.getElementById('payBtn').addEventListener('click', function() {
-            const payment = new PaymentGateway({
-                key: 'key_test_abc123',
-                orderId: 'order_' + Date.now(),
-                amount: 10000,
-                currency: 'INR',
-                onSuccess: function(response) {
-                    alert('Payment successful! Payment ID: ' + response.paymentId);
-                    console.log('Success:', response);
-                },
-                onFailure: function(error) {
-                    alert('Payment failed: ' + error.message);
-                    console.error('Failure:', error);
-                },
-                onClose: function() {
-                    console.log('Payment modal closed');
-                }
-            });
+            try {
+                const payment = new PaymentGateway({
+                    key: 'key_test_abc123',
+                    orderId: 'order_' + Date.now(),
+                    amount: 10000,
+                    currency: 'INR',
+                    onSuccess: function(response) {
+                        alert('Payment successful! Payment ID: ' + response.paymentId);
+                        console.log('Success:', response);
+                    },
+                    onFailure: function(error) {
+                        alert('Payment failed: ' + error.message);
+                        console.error('Failure:', error);
+                    },
+                    onClose: function() {
+                        console.log('Payment modal closed');
+                    }
+                });
 
-            payment.open();
+                payment.open();
+            } catch (error) {
+                alert('Error: ' + error.message);
+                console.error(error);
+            }
         });
     </script>
 </body>

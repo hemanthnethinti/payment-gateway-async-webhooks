@@ -131,7 +131,7 @@ class PaymentGateway {
         // Create iframe
         const iframe = document.createElement('iframe');
         iframe.setAttribute('data-test-id', 'payment-iframe');
-        iframe.src = `${this.gatewayUrl}/checkout?order_id=${encodeURIComponent(this.orderId)}&key=${encodeURIComponent(this.key)}&embedded=true`;
+        iframe.src = `${this.gatewayUrl}/checkout.html?order_id=${encodeURIComponent(this.orderId)}&key=${encodeURIComponent(this.key)}&embedded=true`;
         iframe.style.cssText = `
             width: 100%;
             height: 100%;
