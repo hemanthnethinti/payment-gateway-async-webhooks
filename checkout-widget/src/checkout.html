@@ -378,8 +378,14 @@
                 
                 if (response.ok) {
                     statusMsg.className = 'status-message success';
-                    statusMsg.textContent = `Payment initiated! ID: ${result.id}`;
+                    statusMsg.textContent = `Payment initiated! ID: ${result.id} (Status: ${result.status})`;
                     statusMsg.setAttribute('data-test-id', 'payment-success');
+                    
+                    // Re-enable button after 2 seconds
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Pay ₹10,000';
+                    }, 2000);
                     
                     // Notify parent window if embedded
                     if (embeddedMode && window.parent !== window) {
@@ -393,6 +399,7 @@
                     throw new Error(result.message || 'Payment failed');
                 }
             } catch (error) {
+                console.error('Payment error:', error);
                 statusMsg.className = 'status-message error';
                 statusMsg.textContent = `Error: ${error.message}`;
                 statusMsg.setAttribute('data-test-id', 'payment-error');
