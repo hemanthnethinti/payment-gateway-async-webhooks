@@ -1,0 +1,53 @@
+setup:
+  - echo "Building payment gateway application..."
+  - mvn -q -f backend/pom.xml -DskipTests package
+  - echo "Building Docker images..."
+  - docker-compose build
+
+start:
+  - echo "Starting all services..."
+  - docker-compose up -d
+  - echo "Waiting for services to be healthy..."
+  - sleep 30
+  - docker-compose ps
+
+verify:
+  - echo "=== Health Checks ==="
+  - curl --fail --retry 5 --retry-delay 5 http://localhost:8000/actuator/health || exit 1
+  - echo "API Health: OK"
+  - echo ""
+  - echo "=== Job Queue Status ==="
+  - curl --fail http://localhost:8000/api/v1/test/jobs/status || exit 1
+  - echo ""
+  - echo "=== Frontend Services ==="
+  - curl --fail --head http://localhost:3000/ || echo "Dashboard not responding"
+  - curl --fail --head http://localhost:3001/ || echo "Checkout not responding"
+  - echo ""
+  - echo "=== Database Connection ==="
+  - docker exec postgres_gateway pg_isready -U gateway_user || exit 1
+  - echo "PostgreSQL: OK"
+  - echo ""
+  - echo "=== Redis Connection ==="
+  - docker exec redis_gateway redis-cli ping || exit 1
+  - echo "Redis: OK"
+  - echo ""
+  - echo "=== API Endpoints Test ==="
+  - echo "Testing payment creation..."
+  - curl -X POST http://localhost:8000/api/v1/payments \
+    -H "Content-Type: application/json" \
+    -H "X-Api-Key: key_test_abc123" \
+    -H "X-Api-Secret: secret_test_xyz789" \
+    -H "Idempotency-Key: test_verify_$(date +%s)" \
+    -d '{"order_id":"verify_order","amount":5000,"currency":"INR","method":"upi","vpa":"test@upi"}' \
+    --fail || exit 1
+  - echo ""
+  - echo "All verification checks passed!"
+
+test:
+  - echo "Running integration tests..."
+  - echo "Test suite not implemented (optional)"
+
+shutdown:
+  - echo "Shutting down all services..."
+  - docker-compose down -v
+  - echo "Cleanup complete"

@@ -1,0 +1,10 @@
+{
+  "name": "payment-gateway-checkout",
+  "version": "1.0.0",
+  "description": "Payment Gateway Checkout Widget",
+  "main": "src/sdk/PaymentGateway.js",
+  "scripts": {
+    "start": "http-server src -p 3001 --cors"
+  },
+  "dependencies": {}
+}

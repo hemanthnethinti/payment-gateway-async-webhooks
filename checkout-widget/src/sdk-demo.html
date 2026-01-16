@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Gateway SDK Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .demo-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1 data-test-id="sdk-demo-title">Payment Gateway SDK Demo</h1>
+    
+    <div class="demo-section" data-test-id="sdk-demo-section">
+        <h2>Embeddable Payment SDK</h2>
+        <p>Click the button below to launch the payment widget:</p>
+        <button id="payBtn" data-test-id="launch-payment-button">Launch Payment Widget</button>
+    </div>
+
+    <div class="demo-section" data-test-id="sdk-code-section">
+        <h2>Integration Code</h2>
+        <pre data-test-id="sdk-integration-code"><code>&lt;!-- Include the SDK --&gt;
+&lt;script src="https://gateway.example.com/sdk/PaymentGateway.js"&gt;&lt;/script&gt;
+
+&lt;script&gt;
+// Initialize and open payment
+const payment = new PaymentGateway({
+    key: 'key_test_abc123',
+    orderId: 'order_' + Date.now(),
+    amount: 10000,
+    currency: 'INR',
+    onSuccess: function(response) {
+        console.log('Payment successful:', response);
+    },
+    onFailure: function(error) {
+        console.log('Payment failed:', error);
+    },
+    onClose: function() {
+        console.log('Payment modal closed');
+    }
+});
+
+payment.open();
+&lt;/script&gt;</code></pre>
+    </div>
+
+    <!-- Include the Payment Gateway SDK -->
+    <script src="/sdk/PaymentGateway.js"></script>
+    
+    <script>
+        document.getElementById('payBtn').addEventListener('click', function() {
+            const payment = new PaymentGateway({
+                key: 'key_test_abc123',
+                orderId: 'order_' + Date.now(),
+                amount: 10000,
+                currency: 'INR',
+                onSuccess: function(response) {
+                    alert('Payment successful! Payment ID: ' + response.paymentId);
+                    console.log('Success:', response);
+                },
+                onFailure: function(error) {
+                    alert('Payment failed: ' + error.message);
+                    console.error('Failure:', error);
+                },
+                onClose: function() {
+                    console.log('Payment modal closed');
+                }
+            });
+
+            payment.open();
+        });
+    </script>
+</body>
+</html>

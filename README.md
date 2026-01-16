@@ -396,31 +396,180 @@ To complete the implementation:
 ## Architecture
 
 ```
-Merchant Website
-        ↓
-Checkout SDK (iframe)
-        ↓
-API Server (8000)
-    ↓    ↓    ↓
-Redis  DB  Workers (8081)
-         ↓    ↓    ↓
-    Payment  Webhook  Refund
-    Worker   Worker   Worker
+┌─────────────────┐
+│ Merchant Website│
+└────────┬────────┘
+         │ (Embed SDK)
+         ↓
+┌─────────────────┐      ┌──────────────┐
+│ Checkout Widget │─────→│  API Server  │
+│   (Port 3001)   │      │ (Port 8000)  │
+└─────────────────┘      └──────┬───────┘
+                                │
+                    ┌───────────┼───────────┐
+                    ↓           ↓           ↓
+              ┌─────────┐  ┌────────┐  ┌────────┐
+              │  Redis  │  │Postgres│  │Workers │
+              │  (6379) │  │ (5432) │  │ (8081) │
+              └─────────┘  └────────┘  └────┬───┘
+                                             │
+                              ┌──────────────┼──────────────┐
+                              ↓              ↓              ↓
+                        Payment Worker  Webhook Worker  Refund Worker
+                        (5-10s delay)   (HMAC signed)   (validation)
+                              │              │              │
+                              └──────────────┴──────────────┘
+                                             │
+                                             ↓
+                                    Merchant Webhook URL
 ```
+
+## Embeddable SDK Integration
+
+### Installation
+
+Include the SDK in your webpage:
+
+```html
+<script src="https://your-gateway.com/sdk/PaymentGateway.js"></script>
+```
+
+### Usage
+
+```javascript
+const payment = new PaymentGateway({
+    key: 'key_test_abc123',           // Your API key
+    orderId: 'order_12345',            // Unique order ID
+    amount: 10000,                     // Amount in paise (₹100.00)
+    currency: 'INR',                   // Currency code
+    
+    // Callbacks
+    onSuccess: function(response) {
+        console.log('Payment ID:', response.paymentId);
+        // Update your UI, redirect to success page
+    },
+    onFailure: function(error) {
+        console.error('Payment failed:', error.message);
+        // Show error message to user
+    },
+    onClose: function() {
+        console.log('Payment modal closed by user');
+    }
+});
+
+// Open the payment modal
+payment.open();
+```
+
+### SDK Features
+
+- **Iframe-based**: Secure, isolated payment form
+- **Responsive**: Mobile-optimized checkout
+- **Multiple Payment Methods**: Card, UPI, Net Banking
+- **3D Secure**: PCI-compliant card processing
+- **Session Management**: Automatic token handling
+
+### SDK Demo
+
+Visit the checkout widget demo:
+- Live Demo: http://localhost:3001/sdk-demo.html
+- Checkout Page: http://localhost:3001/index.html
+
+## Dashboard Features
+
+Access the merchant dashboard at http://localhost:3000
+
+**Features:**
+- Real-time payment status monitoring
+- Webhook logs and retry management
+- Transaction history and filtering
+- Refund processing interface
+- Job queue status (pending/processing/completed)
+- System health indicators
+
+**data-test-id Attributes** (for automated testing):
+- `system-status-card`: System health card
+- `api-status`, `worker-status`, `redis-status`, `database-status`: Service status indicators
+- `stats-card`: Payment statistics
+- `total-payments`, `pending-payments`, `success-payments`, `failed-payments`: Metric displays
+- `recent-payments-card`: Recent transactions
+- `recent-payments-list`: Transaction list
+
+## Checkout Widget Features
+
+Access the checkout at http://localhost:3001
+
+**Features:**
+- Modern, responsive UI
+- Card and UPI payment support
+- Real-time validation
+- Secure data handling
+- Order summary display
+
+**data-test-id Attributes**:
+- `checkout-container`: Main container
+- `payment-form`: Payment form
+- `payment-method-card`, `payment-method-upi`: Payment method selectors
+- `card-number`, `card-expiry`, `card-cvv`: Card input fields
+- `upi-id`: UPI ID input
+- `pay-button`: Submit button
+- `status-message`: Success/error message
+- `payment-success`, `payment-error`: Status-specific messages
 
 ## Documentation
 
-- [IMPLEMENTATION.md](IMPLEMENTATION.md) - Detailed implementation guide
-- Docker Compose networking via `payment-gateway` bridge network
-- All services communicate internally via docker network names
+- **README.md** (this file) - Quick start and API reference
+- **IMPLEMENTATION.md** - Detailed implementation guide
+- **submission.yml** - Automated evaluation configuration
+- **Docker Compose** - Multi-service orchestration
+
+## Docker Services
+
+All services are configured in `docker-compose.yml`:
+
+| Service | Container | Port | Description |
+|---------|-----------|------|-------------|
+| postgres | postgres_gateway | 5432 | PostgreSQL 15 database |
+| redis | redis_gateway | 6379 | Redis job queue |
+| api | api_gateway | 8000 | Payment API server |
+| worker | gateway_worker | 8081 | Background job processor |
+| dashboard | dashboard_gateway | 3000 | Merchant dashboard UI |
+| checkout | checkout_gateway | 3001 | Checkout widget |
+| test-merchant | test_merchant | 4000 | Webhook receiver (testing) |
+
+### Service Health Checks
+
+```bash
+# Check all services
+docker-compose ps
+
+# View logs
+docker-compose logs -f api
+docker-compose logs -f worker
+
+# Restart a service
+docker-compose restart api
+
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (fresh start)
+docker-compose down -v
+```
 
 ## Support
 
-For issues or questions, refer to:
-- [IMPLEMENTATION.md](IMPLEMENTATION.md) - Full technical documentation
-- Docker logs: `docker-compose logs -f [service]`
-- Database queries: `docker-compose exec postgres psql -U gateway_user`
-- Redis inspection: `docker-compose exec redis redis-cli`
+**Troubleshooting:**
+- API health: `curl http://localhost:8000/actuator/health`
+- Job status: `curl http://localhost:8000/api/v1/test/jobs/status`
+- Database: `docker-compose exec postgres psql -U gateway_user -d payment_gateway`
+- Redis: `docker-compose exec redis redis-cli`
+- Logs: `docker-compose logs -f [service-name]`
+
+**Common Issues:**
+1. Port conflicts: Ensure ports 3000, 3001, 5432, 6379, 8000 are free
+2. Docker memory: Allocate at least 4GB RAM to Docker Desktop
+3. Build failures: Run `docker-compose build --no-cache`
 
 ## License
 

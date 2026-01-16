@@ -1,0 +1,10 @@
+{
+  "name": "payment-gateway-dashboard",
+  "version": "1.0.0",
+  "description": "Payment Gateway Dashboard",
+  "main": "index.html",
+  "scripts": {
+    "start": "http-server . -p 3000 --cors"
+  },
+  "dependencies": {}
+}

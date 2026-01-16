@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Checkout - Payment Gateway</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .checkout-container {
+            background: white;
+            max-width: 500px;
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .order-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            color: #555;
+        }
+        .order-item.total {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            padding-top: 12px;
+            border-top: 2px solid #ddd;
+            margin-top: 12px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .payment-methods {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .payment-method {
+            flex: 1;
+            padding: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            background: white;
+        }
+        .payment-method:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        .payment-method.active {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        .payment-method-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .payment-method-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+        }
+        .card-fields {
+            display: none;
+        }
+        .card-fields.active {
+            display: block;
+        }
+        .upi-fields {
+            display: none;
+        }
+        .upi-fields.active {
+            display: block;
+        }
+        .btn-pay {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-pay:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+        .btn-pay:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .security-info {
+            text-align: center;
+            margin-top: 20px;
+            padding: 12px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #0369a1;
+        }
+        .security-icon {
+            margin-right: 6px;
+        }
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .status-message.success {
+            background: #d1fae5;
+            color: #065f46;
+            display: block;
+        }
+        .status-message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="checkout-container" data-test-id="checkout-container">
+        <h1 data-test-id="checkout-title">Secure Checkout</h1>
+        <p class="subtitle" data-test-id="checkout-subtitle">Complete your payment securely</p>
+
+        <div id="statusMessage" class="status-message" data-test-id="status-message"></div>
+
+        <div class="order-summary" data-test-id="order-summary">
+            <div class="order-item">
+                <span>Order ID:</span>
+                <span id="orderId" data-test-id="order-id">ORD-001</span>
+            </div>
+            <div class="order-item">
+                <span>Item:</span>
+                <span data-test-id="item-name">Premium Subscription</span>
+            </div>
+            <div class="order-item total">
+                <span>Total Amount:</span>
+                <span id="totalAmount" data-test-id="total-amount">₹10,000</span>
+            </div>
+        </div>
+
+        <form id="paymentForm" data-test-id="payment-form">
+            <div class="form-group">
+                <label for="customerEmail">Email Address</label>
+                <input 
+                    type="email" 
+                    id="customerEmail" 
+                    data-test-id="customer-email"
+                    placeholder="you@example.com" 
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Select Payment Method</label>
+                <div class="payment-methods">
+                    <div class="payment-method active" data-method="card" data-test-id="payment-method-card">
+                        <div class="payment-method-icon">💳</div>
+                        <div class="payment-method-name">Card</div>
+                    </div>
+                    <div class="payment-method" data-method="upi" data-test-id="payment-method-upi">
+                        <div class="payment-method-icon">📱</div>
+                        <div class="payment-method-name">UPI</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Payment Fields -->
+            <div class="card-fields active" id="cardFields" data-test-id="card-fields">
+                <div class="form-group">
+                    <label for="cardNumber">Card Number</label>
+                    <input 
+                        type="text" 
+                        id="cardNumber" 
+                        data-test-id="card-number"
+                        placeholder="4111 1111 1111 1111" 
+                        maxlength="19"
+                    >
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="cardExpiry">Expiry (MM/YY)</label>
+                        <input 
+                            type="text" 
+                            id="cardExpiry" 
+                            data-test-id="card-expiry"
+                            placeholder="12/25" 
+                            maxlength="5"
+                        >
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="cardCvv">CVV</label>
+                        <input 
+                            type="text" 
+                            id="cardCvv" 
+                            data-test-id="card-cvv"
+                            placeholder="123" 
+                            maxlength="3"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- UPI Payment Fields -->
+            <div class="upi-fields" id="upiFields" data-test-id="upi-fields">
+                <div class="form-group">
+                    <label for="upiId">UPI ID</label>
+                    <input 
+                        type="text" 
+                        id="upiId" 
+                        data-test-id="upi-id"
+                        placeholder="yourname@upi" 
+                    >
+                </div>
+            </div>
+
+            <button type="submit" class="btn-pay" data-test-id="pay-button">
+                Pay ₹10,000
+            </button>
+        </form>
+
+        <div class="security-info" data-test-id="security-info">
+            <span class="security-icon">🔒</span>
+            Your payment information is encrypted and secure
+        </div>
+    </div>
+
+    <!-- Include the Payment Gateway SDK -->
+    <script src="/sdk/PaymentGateway.js"></script>
+    
+    <script>
+        const API_URL = 'http://localhost:8000/api/v1';
+        const API_KEY = 'key_test_abc123';
+        const API_SECRET = 'secret_test_xyz789';
+        
+        // Payment method selection
+        document.querySelectorAll('.payment-method').forEach(method => {
+            method.addEventListener('click', function() {
+                document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('active'));
+                this.classList.add('active');
+                
+                const selectedMethod = this.getAttribute('data-method');
+                document.getElementById('cardFields').classList.remove('active');
+                document.getElementById('upiFields').classList.remove('active');
+                
+                if (selectedMethod === 'card') {
+                    document.getElementById('cardFields').classList.add('active');
+                } else if (selectedMethod === 'upi') {
+                    document.getElementById('upiFields').classList.add('active');
+                }
+            });
+        });
+
+        // Card number formatting
+        document.getElementById('cardNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+            e.target.value = formattedValue;
+        });
+
+        // Expiry formatting
+        document.getElementById('cardExpiry').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.slice(0, 2) + '/' + value.slice(2, 4);
+            }
+            e.target.value = value;
+        });
+
+        // Form submission
+        document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const btn = document.querySelector('.btn-pay');
+            const statusMsg = document.getElementById('statusMessage');
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            statusMsg.style.display = 'none';
+            
+            const selectedMethod = document.querySelector('.payment-method.active').getAttribute('data-method');
+            const orderId = document.getElementById('orderId').textContent;
+            const email = document.getElementById('customerEmail').value;
+            
+            const payload = {
+                order_id: orderId,
+                amount: 10000,
+                currency: 'INR',
+                method: selectedMethod,
+            };
+
+            if (selectedMethod === 'card') {
+                payload.card_number = document.getElementById('cardNumber').value.replace(/\s/g, '');
+            } else if (selectedMethod === 'upi') {
+                payload.vpa = document.getElementById('upiId').value;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/payments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Api-Key': API_KEY,
+                        'X-Api-Secret': API_SECRET,
+                        'Idempotency-Key': `checkout_${orderId}_${Date.now()}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusMsg.className = 'status-message success';
+                    statusMsg.textContent = `Payment initiated successfully! Payment ID: ${result.id} (Status: ${result.status})`;
+                    statusMsg.setAttribute('data-test-id', 'payment-success');
+                    
+                    // Optionally poll for payment status
+                    setTimeout(() => {
+                        window.location.href = '/success.html?payment_id=' + result.id;
+                    }, 2000);
+                } else {
+                    throw new Error(result.message || 'Payment failed');
+                }
+            } catch (error) {
+                statusMsg.className = 'status-message error';
+                statusMsg.textContent = `Error: ${error.message}`;
+                statusMsg.setAttribute('data-test-id', 'payment-error');
+                btn.disabled = false;
+                btn.textContent = 'Pay ₹10,000';
+            }
+        });
+    </script>
+</body>
+</html>
