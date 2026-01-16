@@ -23,6 +23,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/webhooks")
+@CrossOrigin(origins = "*")
 public class WebhookController {
 	private static final Logger logger = LoggerFactory.getLogger(WebhookController.class);
 

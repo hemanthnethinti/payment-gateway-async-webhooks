@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/v1/payments")
+@CrossOrigin(origins = "*")
 public class PaymentController {
 	private static final Logger logger = LoggerFactory.getLogger(PaymentController.class);
 
