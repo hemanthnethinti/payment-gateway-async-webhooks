@@ -47,6 +47,7 @@ services:
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_pass
       REDIS_URL: redis://redis:6379
+      SPRING_DATA_REDIS_URL: redis://redis:6379
       SPRING_PROFILES_ACTIVE: default
       APP_PAYMENT_TEST_MODE: "false"
       APP_WEBHOOK_TEST_MODE_RETRIES: "false"
@@ -78,6 +79,7 @@ services:
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_pass
       REDIS_URL: redis://redis:6379
+      SPRING_DATA_REDIS_URL: redis://redis:6379
       SPRING_PROFILES_ACTIVE: worker
       APP_PAYMENT_TEST_MODE: "false"
       APP_WEBHOOK_TEST_MODE_RETRIES: "false"
