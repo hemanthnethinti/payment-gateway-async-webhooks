@@ -1,0 +1,154 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_gateway
+    environment:
+      POSTGRES_USER: gateway_user
+      POSTGRES_PASSWORD: gateway_pass
+      POSTGRES_DB: payment_gateway
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gateway_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - payment-gateway
+
+  # Redis Message Queue
+  redis:
+    image: redis:7-alpine
+    container_name: redis_gateway
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - payment-gateway
+
+  # Payment Gateway API Server
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: api_gateway
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/payment_gateway
+      DB_USERNAME: gateway_user
+      DB_PASSWORD: gateway_pass
+      REDIS_URL: redis://redis:6379
+      SPRING_PROFILES_ACTIVE: default
+      APP_PAYMENT_TEST_MODE: "false"
+      APP_WEBHOOK_TEST_MODE_RETRIES: "false"
+      SERVER_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    networks:
+      - payment-gateway
+
+  # Background Worker Service (Payment, Webhook, Refund Processing)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: gateway_worker
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/payment_gateway
+      DB_USERNAME: gateway_user
+      DB_PASSWORD: gateway_pass
+      REDIS_URL: redis://redis:6379
+      SPRING_PROFILES_ACTIVE: worker
+      APP_PAYMENT_TEST_MODE: "false"
+      APP_WEBHOOK_TEST_MODE_RETRIES: "false"
+      PAYMENT_WORKER_THREADS: "3"
+      WEBHOOK_WORKER_THREADS: "3"
+      REFUND_WORKER_THREADS: "2"
+      SERVER_PORT: 8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - payment-gateway
+    restart: unless-stopped
+
+  # Dashboard Application
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: dashboard_gateway
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+      REACT_APP_API_VERSION: v1
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - payment-gateway
+
+  # Checkout Widget Service
+  checkout:
+    build:
+      context: ./checkout-widget
+      dockerfile: Dockerfile
+    container_name: checkout_gateway
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
+    networks:
+      - payment-gateway
+
+  # Optional: Test Merchant Webhook Receiver
+  test-merchant:
+    build:
+      context: ./test-merchant
+      dockerfile: Dockerfile
+    container_name: test_merchant
+    ports:
+      - "4000:4000"
+    environment:
+      WEBHOOK_SECRET: whsec_test_abc123
+      PORT: 4000
+    networks:
+      - payment-gateway
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  payment-gateway:
+    driver: bridge

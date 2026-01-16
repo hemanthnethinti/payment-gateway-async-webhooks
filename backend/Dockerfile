@@ -1,0 +1,35 @@
+# Multi-stage build for payment gateway API service
+FROM maven:3.9-openjdk-17 AS builder
+
+WORKDIR /app
+
+# Copy pom.xml and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source code
+COPY src ./src
+
+# Build application
+RUN mvn clean package -DskipTests
+
+# Runtime stage
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Copy built application from builder stage
+COPY --from=builder /app/target/payment-gateway-backend-*.jar app.jar
+
+# Environment variables
+ENV JAVA_OPTS="-Xmx512m -Xms256m"
+ENV SPRING_PROFILES_ACTIVE="default"
+
+# Expose port for API
+EXPOSE 8000
+
+# Run the API service
+CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar --spring.profiles.active=${SPRING_PROFILES_ACTIVE}"]

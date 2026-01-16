@@ -1,0 +1,197 @@
+# Application Configuration Template for Payment Gateway
+
+spring:
+  application:
+    name: payment-gateway-api
+  
+  # Spring Data JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate # Use 'validate' in production, 'update' for development
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  
+  # DataSource Configuration
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/payment_gateway}
+    username: ${DB_USERNAME:gateway_user}
+    password: ${DB_PASSWORD:gateway_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+  
+  # Redis Configuration
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+      timeout: 60000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: -1ms
+  
+  # Jackson JSON Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: true
+    default-property-inclusion: non_null
+  
+  # Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.gateway: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/payment-gateway.log
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8000}
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Payment Gateway Configuration
+app:
+  # API Configuration
+  api:
+    base-url: ${API_BASE_URL:http://localhost:8000}
+    version: v1
+  
+  # Payment Processing
+  payment:
+    test-mode: ${APP_PAYMENT_TEST_MODE:false}
+    test-processing-delay: ${APP_PAYMENT_TEST_PROCESSING_DELAY:1000}
+    test-payment-success: ${APP_PAYMENT_TEST_PAYMENT_SUCCESS:true}
+    max-retries: ${APP_PAYMENT_MAX_RETRIES:3}
+  
+  # Webhook Configuration
+  webhook:
+    test-mode-retries: ${APP_WEBHOOK_TEST_MODE_RETRIES:false}
+    max-retries: 5
+    timeout-seconds: 5
+    production-intervals:
+      - 0       # Immediate
+      - 60      # 1 minute
+      - 300     # 5 minutes
+      - 1800    # 30 minutes
+      - 7200    # 2 hours
+    test-intervals:
+      - 0       # Immediate
+      - 5       # 5 seconds
+      - 10      # 10 seconds
+      - 15      # 15 seconds
+      - 20      # 20 seconds
+  
+  # Refund Configuration
+  refund:
+    processing-delay-min: 3000  # milliseconds
+    processing-delay-max: 5000  # milliseconds
+  
+  # Job Queue Configuration
+  jobs:
+    payment-queue: payment_queue
+    webhook-queue: webhook_queue
+    refund-queue: refund_queue
+    batch-size: 10
+    poll-interval-ms: 500
+
+# Actuator Configuration (for health checks)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Swagger/SpringDoc OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  show-actuator: true
+
+---
+# Worker Profile Configuration
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: worker
+
+  application:
+    name: payment-gateway-worker
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+server:
+  port: 8081
+
+logging:
+  level:
+    com.gateway.workers: DEBUG
+
+app:
+  worker:
+    enabled: true
+    payment-threads: ${PAYMENT_WORKER_THREADS:3}
+    webhook-threads: ${WEBHOOK_WORKER_THREADS:3}
+    refund-threads: ${REFUND_WORKER_THREADS:2}
+    scheduler:
+      payment-delay-ms: 500
+      webhook-delay-ms: 500
+      refund-delay-ms: 500
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:h2:mem:test
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+
+app:
+  payment:
+    test-mode: true
+    test-processing-delay: 100
+    test-payment-success: true
+  webhook:
+    test-mode-retries: true
